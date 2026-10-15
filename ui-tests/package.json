@@ -1,0 +1,7 @@
+{
+  "name": "apply-track-ui-tests",
+  "private": true,
+  "description": "End-to-end checks for the Apply Track demo page, run in a simulated browser against a live server",
+  "scripts": { "test": "node e2e.js" },
+  "devDependencies": { "jsdom": "^30.1.3" }
+}

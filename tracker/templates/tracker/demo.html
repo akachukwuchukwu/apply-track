@@ -1,0 +1,463 @@
+{% verbatim %}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Apply Track</title>
+<style>
+  :root {
+    --ink: #0c0d0b; --surface: #15181a; --surface-2: #1b1f1c; --border: #262b27;
+    --text: #eceae2; --muted: #9b9f96; --faint: #767c71;
+    --brass: #c68a3e; --brass-bright: #dfa455; --danger: #d9877a;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ink); color: var(--text); font: 15px/1.5 var(--sans); }
+  h1, h2, h3 { margin: 0; font-weight: 600; }
+  button, input, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 24px 20px 64px; }
+  [hidden] { display: none !important; }
+
+  header.top { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding-bottom: 20px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+  header.top h1 { font-size: 1.15rem; }
+  header.top .who { color: var(--muted); font-size: 0.85rem; display: flex; gap: 14px; align-items: baseline; }
+
+  .btn { background: var(--brass); color: var(--ink); border: 0; border-radius: 6px; padding: 8px 16px; font-weight: 600; cursor: pointer; }
+  .btn:disabled { opacity: 0.5; cursor: default; }
+  .btn.quiet { background: transparent; color: var(--muted); border: 1px solid var(--border); font-weight: 400; }
+  .btn.small { padding: 5px 12px; font-size: 0.85rem; }
+  input, select { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; width: 100%; }
+  label { display: block; font-size: 0.8rem; color: var(--muted); margin: 0 0 4px; }
+
+  .msg { min-height: 1.4em; margin: 0 0 12px; font-size: 0.88rem; color: var(--danger); }
+  #app-msg:empty { min-height: 0; margin: 0; }
+
+  /* sign in */
+  .login { max-width: 360px; margin: 56px auto 0; }
+  .login h2 { font-size: 1.3rem; margin-bottom: 4px; }
+  .login p.note { color: var(--muted); font-size: 0.88rem; margin: 0 0 20px; }
+  .login .field { margin-bottom: 14px; }
+  .login .row { display: flex; gap: 10px; }
+
+  /* summary strip */
+  .strip { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--border); border-radius: 8px; background: var(--surface); margin-bottom: 12px; }
+  .strip > div { padding: 14px 18px; border-right: 1px solid var(--border); }
+  .strip > div:last-child { border-right: 0; }
+  .strip .num { font: 500 1.6rem var(--mono); color: var(--brass-bright); }
+  .strip .lbl { color: var(--muted); font-size: 0.8rem; }
+  .by-status { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; min-height: 28px; }
+
+  .layout { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } .strip { grid-template-columns: 1fr; } .strip > div { border-right: 0; border-bottom: 1px solid var(--border); } .strip > div:last-child { border-bottom: 0; } }
+
+  .tools { display: flex; gap: 10px; margin-bottom: 12px; }
+  .tools input { flex: 1; }
+  .tools select { width: auto; }
+  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  th { text-align: left; font-weight: 500; color: var(--faint); font-size: 0.78rem; padding: 10px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: 0; }
+  tbody tr.selected td { background: var(--surface-2); }
+  td.date { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); white-space: nowrap; }
+  .linklike { background: none; border: 0; padding: 0; cursor: pointer; text-align: left; color: var(--text); font-weight: 500; }
+  .linklike:hover { color: var(--brass-bright); }
+  .co { display: block; color: var(--muted); font-size: 0.82rem; font-weight: 400; }
+  .empty { padding: 28px 12px; color: var(--muted); text-align: center; }
+  .pager { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; color: var(--muted); font-size: 0.85rem; }
+  .pager .btns { display: flex; gap: 8px; align-items: center; }
+
+  .badge { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; white-space: nowrap; }
+  .badge::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c, var(--faint)); }
+  .s-APPLIED { --c: #7d9bb5; } .s-SCREENING { --c: #c68a3e; } .s-INTERVIEWING { --c: #dfa455; }
+  .s-OFFER, .s-ACCEPTED { --c: #6fae7e; } .s-REJECTED { --c: #b86a5e; }
+
+  details.add { margin-top: 20px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+  details.add summary { padding: 10px 14px; cursor: pointer; color: var(--muted); }
+  details.add form { padding: 4px 14px 14px; display: grid; gap: 10px; }
+
+  /* detail */
+  aside.detail { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 18px; position: sticky; top: 16px; }
+  aside.detail h2 { font-size: 1.1rem; }
+  aside.detail .sub { color: var(--muted); margin: 2px 0 10px; }
+  aside.detail h3 { font-size: 0.8rem; color: var(--faint); font-weight: 500; margin: 20px 0 8px; }
+  aside.detail ul { list-style: none; margin: 0; padding: 0; }
+  aside.detail li { padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 0.88rem; }
+  aside.detail li:last-child { border-bottom: 0; }
+  aside.detail .when { font-family: var(--mono); font-size: 0.76rem; color: var(--faint); display: block; }
+  aside.detail .note { display: block; color: var(--muted); margin-top: 2px; }
+  aside.detail .none { color: var(--faint); font-size: 0.85rem; }
+  aside.detail a { color: var(--brass-bright); }
+  .change { display: grid; gap: 8px; margin-top: 8px; }
+  .placeholder { color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <h1>Apply Track</h1>
+    <div class="who" id="who" hidden>
+      <span id="who-name"></span>
+      <button type="button" class="btn quiet small" id="logout">Sign out</button>
+    </div>
+  </header>
+
+  <!-- sign in -->
+  <section class="login" id="login">
+    <h2>Sign in</h2>
+    <p class="note">Demo environment with fictional companies. Anyone can use the demo account.</p>
+    <p class="msg" id="login-msg" role="alert"></p>
+    <form id="login-form">
+      <div class="field"><label for="username">Username</label><input id="username" autocomplete="username" required></div>
+      <div class="field"><label for="password">Password</label><input id="password" type="password" autocomplete="current-password" required></div>
+      <div class="row">
+        <button class="btn" type="submit" id="login-btn">Sign in</button>
+        <button class="btn quiet" type="button" id="fill-demo">Fill demo account</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- app -->
+  <main id="app" hidden>
+    <p class="msg" id="app-msg" role="alert" aria-live="polite"></p>
+
+    <div class="strip" id="strip">
+      <div><div class="num" id="stat-total">0</div><div class="lbl">applications</div></div>
+      <div><div class="num" id="stat-rate">0%</div><div class="lbl">response rate</div></div>
+      <div><div class="num" id="stat-days">-</div><div class="lbl">average days to first response</div></div>
+    </div>
+    <div class="by-status" id="by-status"></div>
+
+    <div class="layout">
+      <section aria-label="Applications">
+        <div class="tools">
+          <input id="search" type="search" placeholder="Search role or company" aria-label="Search role or company">
+          <select id="filter" aria-label="Filter by status"><option value="">All statuses</option></select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Role</th><th>Status</th><th>Applied</th></tr></thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+        <div class="pager" id="pager">
+          <span id="count"></span>
+          <span class="btns">
+            <button type="button" class="btn quiet small" id="prev">Previous</button>
+            <span id="page-label"></span>
+            <button type="button" class="btn quiet small" id="next">Next</button>
+          </span>
+        </div>
+
+        <details class="add">
+          <summary>Add an application</summary>
+          <form id="add-form">
+            <div><label for="add-company">Company</label><input id="add-company" list="company-list" required><datalist id="company-list"></datalist></div>
+            <div><label for="add-role">Role</label><input id="add-role" required></div>
+            <div><label for="add-status">Status</label><select id="add-status"></select></div>
+            <div><button class="btn" type="submit">Add</button></div>
+          </form>
+        </details>
+      </section>
+
+      <aside class="detail" id="detail" aria-live="polite">
+        <p class="placeholder">Select an application to see its history and update its status.</p>
+      </aside>
+    </div>
+  </main>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var STATUS = {
+    WISHLIST: 'Wishlist', APPLIED: 'Applied', SCREENING: 'Recruiter screen', INTERVIEWING: 'Interviewing',
+    OFFER: 'Offer', ACCEPTED: 'Accepted', REJECTED: 'Rejected', WITHDRAWN: 'Withdrawn'
+  };
+  var INTERVIEW = { PHONE: 'Phone screen', TECHNICAL: 'Technical', ONSITE: 'Onsite / virtual onsite', FINAL: 'Final round' };
+
+  // The access token lives in memory only: never in localStorage, so it
+  // isn't readable by anything else on the page and disappears on refresh.
+  var token = null;
+  var state = { page: 1, status: '', search: '', selectedId: null, companies: [] };
+
+  function $(id) { return document.getElementById(id); }
+
+  // Every value from the API is inserted with textContent, never innerHTML,
+  // so a hostile company name or note can't inject markup or script.
+  function el(tag, props, children) {
+    var node = document.createElement(tag);
+    Object.keys(props || {}).forEach(function (k) {
+      if (k === 'text') node.textContent = props[k]; else node.setAttribute(k, props[k]);
+    });
+    (children || []).forEach(function (c) { node.appendChild(c); });
+    return node;
+  }
+
+  function badge(status) {
+    return el('span', { 'class': 'badge s-' + status, text: STATUS[status] || status });
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return '-';
+    var d = new Date(iso);
+    return isNaN(d) ? iso : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  function describeError(data) {
+    if (!data) return '';
+    if (typeof data === 'string') return data;
+    if (data.detail) return data.detail;
+    return Object.keys(data).map(function (k) {
+      var v = data[k];
+      return k + ': ' + (Array.isArray(v) ? v.join(' ') : v);
+    }).join('. ');
+  }
+
+  function say(id, text) { $(id).textContent = text || ''; }
+
+  function api(path, options) {
+    options = options || {};
+    var headers = { 'Content-Type': 'application/json' };
+    if (token) headers.Authorization = 'Bearer ' + token;
+    return fetch(path, { method: options.method || 'GET', headers: headers, body: options.body })
+      .then(function (res) {
+        return res.json().catch(function () { return null; }).then(function (data) {
+          if (res.status === 401 && token) {
+            signOut('Your session expired. Please sign in again.');
+            throw new Error('unauthorized');
+          }
+          if (!res.ok) {
+            var err = new Error(describeError(data) || 'Request failed (' + res.status + ')');
+            err.status = res.status;
+            throw err;
+          }
+          return data;
+        });
+      });
+  }
+
+  function showError(err) { if (err.message !== 'unauthorized') say('app-msg', err.message); }
+
+  // ---------- sign in / out ----------
+  function signOut(message) {
+    token = null;
+    state = { page: 1, status: '', search: '', selectedId: null, companies: [] };
+    $('app').hidden = true; $('who').hidden = true; $('login').hidden = false;
+    $('password').value = '';
+    say('login-msg', message || '');
+    say('app-msg', '');
+  }
+
+  function signIn(username, password) {
+    $('login-btn').disabled = true;
+    say('login-msg', '');
+    return api('/api/token/', { method: 'POST', body: JSON.stringify({ username: username, password: password }) })
+      .then(function (data) {
+        token = data.access;
+        $('who-name').textContent = username;
+        $('login').hidden = true; $('who').hidden = false; $('app').hidden = false;
+        return refreshAll();
+      })
+      .catch(function (err) {
+        if (err.message === 'unauthorized') return;
+        say('login-msg', err.status === 401 ? 'Wrong username or password.' : err.message);
+      })
+      .then(function () { $('login-btn').disabled = false; });
+  }
+
+  // ---------- data ----------
+  function refreshAll() {
+    say('app-msg', '');
+    return Promise.all([loadStats(), loadList(), loadCompanies()]).catch(showError);
+  }
+
+  function loadStats() {
+    return api('/api/dashboard/').then(function (d) {
+      $('stat-total').textContent = d.total_applications;
+      $('stat-rate').textContent = d.response_rate_percent + '%';
+      $('stat-days').textContent = d.average_days_to_response === null ? '-' : d.average_days_to_response;
+      var box = $('by-status');
+      box.textContent = '';
+      Object.keys(STATUS).filter(function (s) { return d.by_status[s]; }).forEach(function (s) {
+        var chip = badge(s);
+        chip.textContent = (STATUS[s] || s) + ' ' + d.by_status[s];
+        box.appendChild(chip);
+      });
+    });
+  }
+
+  function loadList() {
+    var q = '?page=' + state.page;
+    if (state.status) q += '&status=' + encodeURIComponent(state.status);
+    if (state.search) q += '&search=' + encodeURIComponent(state.search);
+    return api('/api/applications/' + q).then(function (d) {
+      var body = $('rows');
+      body.textContent = '';
+      if (!d.results.length) {
+        var cell = el('td', { colspan: '3', 'class': 'empty', text: 'No applications match.' });
+        body.appendChild(el('tr', {}, [cell]));
+      }
+      d.results.forEach(function (a) {
+        var open = el('button', { type: 'button', 'class': 'linklike', text: a.role_title });
+        open.addEventListener('click', function () { selectApplication(a.id, true); });
+        var first = el('td', {}, [open, el('span', { 'class': 'co', text: a.company_name })]);
+        var tr = el('tr', a.id === state.selectedId ? { 'class': 'selected' } : {},
+          [first, el('td', {}, [badge(a.status)]), el('td', { 'class': 'date', text: a.applied_date || '-' })]);
+        body.appendChild(tr);
+      });
+      $('count').textContent = d.count + (d.count === 1 ? ' application' : ' applications');
+      $('prev').disabled = !d.previous;
+      $('next').disabled = !d.next;
+      $('page-label').textContent = (d.previous || d.next) ? 'Page ' + state.page : '';
+    });
+  }
+
+  // Companies are paginated too, so follow every page to fill the picker.
+  function loadCompanies() {
+    var all = [];
+    function page(n) {
+      return api('/api/companies/?page=' + n).then(function (d) {
+        all = all.concat(d.results);
+        return d.next ? page(n + 1) : all;
+      });
+    }
+    return page(1).then(function (list) {
+      state.companies = list;
+      var dl = $('company-list');
+      dl.textContent = '';
+      list.forEach(function (c) { dl.appendChild(el('option', { value: c.name })); });
+    });
+  }
+
+  function selectApplication(id, reveal) {
+    state.selectedId = id;
+    return api('/api/applications/' + id + '/').then(function (a) {
+      renderDetail(a);
+      // On a phone the detail panel sits below the whole list, so a tap would
+      // otherwise appear to do nothing.
+      if (reveal && window.matchMedia && window.matchMedia('(max-width: 900px)').matches && $('detail').scrollIntoView) {
+        $('detail').scrollIntoView({ block: 'start' });
+      }
+    }).then(loadList).catch(showError);
+  }
+
+  function renderDetail(a) {
+    var box = $('detail');
+    box.textContent = '';
+    box.appendChild(el('h2', { text: a.role_title }));
+    var sub = el('p', { 'class': 'sub', text: a.company_name + ' ' });
+    sub.appendChild(badge(a.status));
+    box.appendChild(sub);
+
+    if (a.job_url && /^https?:\/\//i.test(a.job_url)) {
+      box.appendChild(el('p', {}, [el('a', { href: a.job_url, rel: 'noopener noreferrer', target: '_blank', text: 'Job posting' })]));
+    }
+    if (a.notes) box.appendChild(el('p', { text: a.notes }));
+
+    box.appendChild(el('h3', { text: 'Status history' }));
+    var hist = el('ul');
+    a.status_events.forEach(function (e) {
+      var li = el('li', {}, [el('span', { 'class': 'when', text: fmtDate(e.changed_at) }), badge(e.status)]);
+      if (e.note) li.appendChild(el('span', { 'class': 'note', text: e.note }));
+      hist.appendChild(li);
+    });
+    box.appendChild(a.status_events.length ? hist : el('p', { 'class': 'none', text: 'No history yet.' }));
+
+    box.appendChild(el('h3', { text: 'Interviews' }));
+    var iv = el('ul');
+    a.interviews.forEach(function (i) {
+      iv.appendChild(el('li', {}, [
+        el('span', { 'class': 'when', text: fmtDate(i.scheduled_at) }),
+        el('span', { text: (INTERVIEW[i.interview_type] || i.interview_type) + (i.completed ? ' (done)' : '') })
+      ]));
+    });
+    box.appendChild(a.interviews.length ? iv : el('p', { 'class': 'none', text: 'None scheduled.' }));
+
+    box.appendChild(el('h3', { text: 'Contacts' }));
+    var ct = el('ul');
+    a.contacts.forEach(function (c) { ct.appendChild(el('li', { text: c.name + (c.role ? ', ' + c.role : '') })); });
+    box.appendChild(a.contacts.length ? ct : el('p', { 'class': 'none', text: 'None added.' }));
+
+    box.appendChild(el('h3', { text: 'Update status' }));
+    var form = el('form', { 'class': 'change', id: 'change-form' });
+    var sel = el('select', { id: 'change-status', 'aria-label': 'New status' });
+    Object.keys(STATUS).forEach(function (s) {
+      var o = el('option', { value: s, text: STATUS[s] });
+      if (s === a.status) o.selected = true;
+      sel.appendChild(o);
+    });
+    var note = el('input', { id: 'change-note', placeholder: 'Note (optional)', maxlength: '300', 'aria-label': 'Note' });
+    var go = el('button', { type: 'submit', 'class': 'btn', text: 'Update status' });
+    form.appendChild(sel); form.appendChild(note); form.appendChild(go);
+    form.addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      go.disabled = true;
+      api('/api/applications/' + a.id + '/change-status/', {
+        method: 'POST', body: JSON.stringify({ status: sel.value, note: note.value })
+      }).then(function () {
+        return Promise.all([selectApplication(a.id), loadStats()]);
+      }).catch(showError).then(function () { go.disabled = false; });
+    });
+    box.appendChild(form);
+  }
+
+  // ---------- events ----------
+  $('login-form').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    signIn($('username').value.trim(), $('password').value);
+  });
+  $('fill-demo').addEventListener('click', function () {
+    $('username').value = 'demo'; $('password').value = 'demo-password-123';
+  });
+  $('logout').addEventListener('click', function () { signOut(''); });
+
+  Object.keys(STATUS).forEach(function (s) {
+    $('filter').appendChild(el('option', { value: s, text: STATUS[s] }));
+    $('add-status').appendChild(el('option', Object.assign({ value: s, text: STATUS[s] }, s === 'WISHLIST' ? { selected: 'selected' } : {})));
+  });
+
+  $('filter').addEventListener('change', function () {
+    state.status = $('filter').value; state.page = 1; loadList().catch(showError);
+  });
+
+  var timer = null;
+  $('search').addEventListener('input', function () {
+    clearTimeout(timer);
+    timer = setTimeout(function () {
+      state.search = $('search').value.trim(); state.page = 1; loadList().catch(showError);
+    }, 300);
+  });
+
+  $('prev').addEventListener('click', function () { state.page = Math.max(1, state.page - 1); loadList().catch(showError); });
+  $('next').addEventListener('click', function () { state.page += 1; loadList().catch(showError); });
+
+  $('add-form').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var name = $('add-company').value.trim();
+    var existing = state.companies.filter(function (c) { return c.name.toLowerCase() === name.toLowerCase(); })[0];
+    var companyId = existing
+      ? Promise.resolve(existing.id)
+      : api('/api/companies/', { method: 'POST', body: JSON.stringify({ name: name }) }).then(function (c) { return c.id; });
+
+    companyId.then(function (id) {
+      return api('/api/applications/', {
+        method: 'POST',
+        body: JSON.stringify({ company: id, role_title: $('add-role').value.trim(), status: $('add-status').value })
+      });
+    }).then(function (created) {
+      $('add-form').reset();
+      $('add-status').value = 'WISHLIST';
+      state.page = 1;
+      return Promise.all([loadStats(), loadCompanies()]).then(function () { return selectApplication(created.id, true); });
+    }).catch(showError);
+  });
+})();
+</script>
+</body>
+</html>
+{% endverbatim %}
