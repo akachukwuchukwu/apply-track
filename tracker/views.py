@@ -5,7 +5,9 @@ from rest_framework import viewsets, filters, status as http_status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .models import Application, Company, Contact, Interview, StatusEvent
 from .serializers import (
@@ -156,3 +158,13 @@ class DashboardStatsView(APIView):
             "response_rate_percent": response_rate,
             "average_days_to_response": avg_days_to_response,
         })
+
+
+class ThrottledTokenObtainPairView(TokenObtainPairView):
+    """
+    The stock login endpoint, rate-limited per client address (the "login"
+    scope in settings.REST_FRAMEWORK). Without a limit, a public login endpoint
+    can be tried against thousands of passwords a minute.
+    """
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "login"

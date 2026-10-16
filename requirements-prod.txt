@@ -1,0 +1,4 @@
+# Everything needed to run on a Linux server. gunicorn does not run on Windows,
+# which is why it lives here and not in requirements.txt.
+-r requirements.txt
+gunicorn>=26.2,<27

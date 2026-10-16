@@ -1,5 +1,6 @@
 import pytest
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from rest_framework.test import APIClient
 
 from tracker.models import Application, Company
@@ -40,3 +41,12 @@ def app_a(user_a, company):
         owner=user_a, company=company, role_title="Backend Engineer",
         status=Application.Status.APPLIED,
     )
+
+
+@pytest.fixture(autouse=True)
+def clear_rate_limit_counters():
+    # The login throttle stores its counters in the (file-based) cache, which
+    # outlives a single test. Clearing it keeps tests independent of each other.
+    cache.clear()
+    yield
+    cache.clear()

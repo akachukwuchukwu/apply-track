@@ -1,0 +1,3 @@
+# Nightly reset of the public demo data, at 03:15 server time. Installed as
+# /etc/cron.d/applytrack-demo-reset. Runs as the service user.
+15 3 * * * www-data bash /opt/applytrack/deploy/manage.sh reset_demo_data --yes >> /var/lib/applytrack/reset.log 2>&1
