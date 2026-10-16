@@ -4,6 +4,8 @@ A job-application tracker API built with Django and Django REST Framework. Track
 
 I built it to manage my own international job search, then made it a proper multi-user API. Every user sees only their own data, and that guarantee is covered by tests rather than just asserted.
 
+**Live demo:** https://applytrack.duckdns.org (click **Fill demo account**, then **Sign in**). It runs on fictional data that is reset every night, so feel free to change things.
+
 ![Apply Track demo page](docs/screenshot.png)
 
 ## What it does
@@ -58,7 +60,7 @@ Everything that differs between a laptop and a server comes from environment var
 
 ## Deploying
 
-[DEPLOYMENT.md](DEPLOYMENT.md) walks through putting this on a Linux server behind Apache with a Let's Encrypt certificate, one command at a time, and the `deploy/` folder holds the files it uses: the systemd service, the Apache site, the environment template, a nightly demo reset, and a `manage.sh` wrapper that runs management commands as the service user.
+[DEPLOYMENT.md](DEPLOYMENT.md) walks through putting this on a Linux server behind Apache with a Let's Encrypt certificate, one command at a time, and the live demo above runs exactly that setup. The `deploy/` folder holds the files it uses: the systemd service, the Apache site, the environment template, a nightly demo reset, and a `manage.sh` wrapper that runs management commands as the service user.
 
 ## Try the API
 
